@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-DESCRIPTION="""
+"""
 A better way to watch /proc/interrupts, especially on large NUMA machines with
 so many CPUs that /proc/interrupts is wider than the screen.  Press '0'-'9'
 for node views, 't' for node totals
@@ -215,7 +215,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero, filt
 
 def main(args):
     
-    parser = OptionParser(description=DESCRIPTION)
+    parser = OptionParser(description=__doc__)
 
     parser.add_option("-i", "--iterations", default='-1',
                       help="iterations to run")
@@ -258,3 +258,4 @@ def main(args):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
+
