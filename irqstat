@@ -75,7 +75,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
     cpunodes = {}
     numacores = {}
     loops = 0
-    cntsz = len('NODEXX')
+    width = len('NODEXX')
 
     print ("interactive commands -- "
            "t: view totals, 0-9: view node, any other key: quit")
@@ -154,36 +154,33 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
         rows = sorted(irqs.values(), key=lambda x: sort_func(x),
                       reverse=(sort != 'n'))
 
+        # determine the width required for the count field
         for idx, irq in enumerate(rows):
-            if idx == rowcnt:
-                break
-            cntsz = max(cntsz, len(str(irq['sum'] - irq['oldsum'])))
+            width = max(width, len(str(irq['sum'] - irq['oldsum'])))
 
         print "" + '\r'
         print "IRQs / " + str(seconds) + " second(s)" + '\r'
-        fmtstr = ('IRQ# %' + str(cntsz) + 's') % 'TOTAL'
+        fmtstr = ('IRQ# %' + str(width) + 's') % 'TOTAL'
 
         # node view header
         if int(dispnode) >= 0:
             node = 'NODE%s' % dispnode
-            fmtstr += (' %' + str(cntsz) + 's ') % node
+            fmtstr += (' %' + str(width) + 's ') % node
             for idx, val in enumerate(irq['cpus']):
                 if cpunodes[cpus[idx]] == dispnode:
                     cpu = 'CPU%s' % cpus[idx]
-                    fmtstr += (' %' + str(cntsz) + 's ') % cpu
+                    fmtstr += (' %' + str(width) + 's ') % cpu
         # top view header
         else:
             for node in sorted(numacores.keys()):
                 node = 'NODE%s' % node
-                fmtstr += (' %' + str(cntsz) + 's ') % node
+                fmtstr += (' %' + str(width) + 's ') % node
 
         fmtstr += ' NAME'
         print fmtstr + '\r'
 
+        displayed_rows = 0
         for idx, irq in enumerate(rows):
-            if idx == rowcnt:
-                break
-
             if len(filters) and not filter_found(irq['name'], filters):
                 continue
 
@@ -192,7 +189,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
                 continue
 
             # IRQ# TOTAL
-            fmtstr = ('%4s %' + str(cntsz) + 'd') % (irq['num'], total)
+            fmtstr = ('%4s %' + str(width) + 'd') % (irq['num'], total)
 
             # node view
             if int(dispnode) >= 0:
@@ -201,11 +198,11 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
                 nodecnt = irq[nodesum] - irq[oldnodesum]
                 if zero and not nodecnt:
                     continue
-                fmtstr += (' %' + str(cntsz) + 's ') % str(nodecnt)
-                for idx, val in enumerate(irq['cpus']):
-                    if cpunodes[cpus[idx]] == dispnode:
-                        fmtstr += ((' %' + str(cntsz) + 's ') %
-                                   str(irq['cpus'][idx] - irq['oldcpus'][idx]))
+                fmtstr += (' %' + str(width) + 's ') % str(nodecnt)
+                for cpu, val in enumerate(irq['cpus']):
+                    if cpunodes[cpus[cpu]] == dispnode:
+                        fmtstr += ((' %' + str(width) + 's ') %
+                                   str(irq['cpus'][cpu] - irq['oldcpus'][cpu]))
 
             # top view
             else:
@@ -213,16 +210,19 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
                     oldnodesum = 'oldsum' + node
                     nodesum = 'sum' + node
                     nodecnt = irq[nodesum] - irq[oldnodesum]
-                    fmtstr += ((' %' + str(cntsz) + 's ') % str(nodecnt))
+                    fmtstr += ((' %' + str(width) + 's ') % str(nodecnt))
             fmtstr += ' ' + irq['name']
             print fmtstr + '\r'
+            displayed_rows += 1
+            if displayed_rows == rowcnt:
+                break
 
         # Update field widths after the first iteration.  Data changes
         # significantly between the all-time stats and the interval stats, so
         # this compresses the fields quite a bit.  Updating every iteration
         # is too jumpy.
         if loops == 0:
-            cntsz = len('NODEXX')
+            width = len('NODEXX')
 
         loops += 1
         if loops == iterations:
