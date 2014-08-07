@@ -193,10 +193,12 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
 
             # node view
             if int(dispnode) >= 0:
-                oldkey = 'oldsum' + dispnode
-                key = 'sum' + dispnode
-                fmtstr += (' %' + str(cntsz) + 's ') % str(irq[key]
-                                                           - irq[oldkey])
+                oldnodesum = 'oldsum' + dispnode
+                nodesum = 'sum' + dispnode
+                nodecnt = irq[nodesum] - irq[oldnodesum]
+                if zero and not nodecnt:
+                    continue
+                fmtstr += (' %' + str(cntsz) + 's ') % str(nodecnt)
                 for idx, val in enumerate(irq['cpus']):
                     if cpunodes[cpus[idx]] == dispnode:
                         fmtstr += ((' %' + str(cntsz) + 's ') %
@@ -205,10 +207,10 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
             # top view
             else:
                 for node in sorted(numacores.keys()):
-                    oldkey = 'oldsum' + node
-                    key = 'sum' + node
-                    fmtstr += ((' %' + str(cntsz) + 's ') %
-                               str(irq[key] - irq[oldkey]))
+                    oldnodesum = 'oldsum' + node
+                    nodesum = 'sum' + node
+                    nodecnt = irq[nodesum] - irq[oldnodesum]
+                    fmtstr += ((' %' + str(cntsz) + 's ') % str(nodecnt))
             fmtstr += ' ' + irq['name']
             print fmtstr + '\r'
 
