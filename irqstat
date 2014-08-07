@@ -147,12 +147,13 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
                         return val['sum' + node] - val['oldsum' + node]
             if sort == 't':
                 return val['sum'] - val['oldsum']
-
-            if sort == 'n':
+            if sort == 'i':
                 return int(val['num'])
-
-        rows = sorted(irqs.values(), key=lambda x: sort_func(x),
-                      reverse=(sort != 'n'))
+            if sort == 'n':
+                return val['name']
+        # reverse sort all IRQ count sorts
+        rev = sort not in ['i', 'n']
+        rows = sorted(irqs.values(), key=lambda x: sort_func(x), reverse=rev)
 
         # determine the width required for the count field
         for idx, irq in enumerate(rows):
@@ -245,8 +246,8 @@ def main(args):
     parser.add_option("-r", "--rows", default='10',
                       help="rows to display (default 10)")
     parser.add_option("-s", "--sort", default='t',
-                      help="column to sort on ('t':total, "
-                      "'n':IRQ number, '1':node1, etc) (default: 't')")
+                      help="column to sort on ('t':total, 'n': name, "
+                      "'i':IRQ number, '1':node1, etc) (default: 't')")
     parser.add_option("-t", "--time", default='5',
                       help="update interval in seconds")
     parser.add_option("-z", "--zero", action="store_true",
