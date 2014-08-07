@@ -107,11 +107,11 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
             if totals is None:
                 try:
                     num = int(irqnum)
-                except:
+                except ValueError:
                     continue
 
             irq = {}
-            irq['cpus'] = map(int, vals[1:len(cpus)+1])
+            irq['cpus'] = [int(x) for x in vals[1:len(cpus)+1]]
             irq['oldcpus'] = (irqs[irqnum]['cpus'] if irqnum in irqs
                               else [0] * len(cpus))
             irq['name'] = ' '.join(vals[len(cpus)+1:])
@@ -138,7 +138,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
             sortnum = -1
             try:
                 sortnum = int(sort)
-            except:
+            except ValueError:
                 pass
 
             if sortnum >= 0:
@@ -153,7 +153,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
                 return val['name']
         # reverse sort all IRQ count sorts
         rev = sort not in ['i', 'n']
-        rows = sorted(irqs.values(), key=lambda x: sort_func(x), reverse=rev)
+        rows = sorted(irqs.values(), key=sort_func, reverse=rev)
 
         # determine the width required for the count field
         for idx, irq in enumerate(rows):
@@ -231,7 +231,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
 
         # thread.interrupt_main() does not seem to interrupt a sleep, so break
         # it into tenth-of-a-second sleeps to improve user response time on exit
-        for sec in range(0, seconds * 10):
+        for _ in range(0, seconds * 10):
             sleep(.1)
 
 
