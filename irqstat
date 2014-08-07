@@ -228,7 +228,10 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
         if loops == iterations:
             break
 
-        sleep(seconds)
+        # thread.interrupt_main() does not seem to interrupt a sleep, so break
+        # it into ten-of-a-second sleeps to improve user response time on exit
+        for sec in range(0, seconds * 10):
+            sleep(.1)
 
 
 def main(args):
