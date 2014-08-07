@@ -11,31 +11,30 @@ import tty
 import termios
 from time import sleep
 import subprocess
-from optparse import OptionParser, OptionGroup
-import select
+from optparse import OptionParser
 import thread
-import time
 import threading
 
-keyevent = threading.Event()
+KEYEVENT = threading.Event()
 
 
 def gen_numa():
+    """Generate NUMA info"""
     cpunodes = {}
     numacores = {}
-    f = subprocess.Popen('numactl --hardware | grep cpus', shell=True,
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    errtxt = f.stderr.readline()
+    out = subprocess.Popen('numactl --hardware | grep cpus', shell=True,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    errtxt = out.stderr.readline()
     if errtxt:
         print errtxt + '\r\n'
         print "Is numactl installed?\r"
         exit(1)
-    for line in f.stdout.readlines():
-        c = line.split()
-        if c[0] == "node" and c[2] == "cpus:" and len(c) > 3:
-            node = c[1]
-            numacores[node] = c[3:]
-            for core in c[3:]:
+    for line in out.stdout.readlines():
+        arr = line.split()
+        if arr[0] == "node" and arr[2] == "cpus:" and len(arr) > 3:
+            node = arr[1]
+            numacores[node] = arr[3:]
+            for core in arr[3:]:
                 cpunodes[core] = node
     return numacores, cpunodes
 
@@ -50,30 +49,28 @@ def wait_for_input():
     acceptable_keys = ['0', '1', '2', '3', '4', '5', '6', '7',
                        '8', '9', '0', 't']
     while True:
-        ch = False
-
-        ch = sys.stdin.read(1)
+        key = sys.stdin.read(1)
 
         # simple just to exit on any invalid input
-        if not ch in acceptable_keys:
+        if not key in acceptable_keys:
             thread.interrupt_main()
 
         # set the new input and notify the main thread
-        INCHAR = ch
-        keyevent.set()
+        INCHAR = key
+        KEYEVENT.set()
 
 
 def filter_found(name, filter_list):
-    for filter in filter_list:
-        if filter in name:
+    """Check if IRQ name matches anything in the filter list"""
+    for filt in filter_list:
+        if filt in name:
             return True
     return False
 
 
 def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
                  filters):
-    global INCHAR
-
+    """Main I/O loop"""
     irqs = {}
     cpunodes = {}
     numacores = {}
@@ -82,12 +79,12 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
 
     while True:
         # Grab the new display type at a time when nothing is in flux
-        if keyevent.isSet():
-            keyevent.clear()
+        if KEYEVENT.isSet():
+            KEYEVENT.clear()
             dispnode = INCHAR if INCHAR in numacores.keys() else '-1'
 
-        fd = open('/proc/interrupts', 'r')
-        header = fd.readline()
+        out = open('/proc/interrupts', 'r')
+        header = out.readline()
         cpus = []
         for name in header.split():
             num = name[3:]
@@ -99,7 +96,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
             if not num in cpunodes.keys():
                 numacores, cpunodes = gen_numa()
 
-        for line in fd.readlines():
+        for line in out.readlines():
             vals = line.split()
             irqnum = vals[0].rstrip(':')
 
@@ -133,22 +130,23 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
             # save old
             irqs[irqnum] = irq
 
-        def sort_func(x):
+        def sort_func(val):
+            """Sort output"""
             sortnum = -1
             try:
                 sortnum = int(sort)
             except:
-                None
+                pass
 
             if sortnum >= 0:
                 for node in numacores.keys():
                     if sortnum == int(node):
-                        return x['sum' + node] - x['oldsum' + node]
+                        return val['sum' + node] - val['oldsum' + node]
             if sort == 't':
-                return x['sum'] - x['oldsum']
+                return val['sum'] - val['oldsum']
 
             if sort == 'n':
-                return int(x['num'])
+                return int(val['num'])
 
         rows = sorted(irqs.values(), key=lambda x: sort_func(x),
                       reverse=(sort != 'n'))
@@ -229,9 +227,9 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
 
 
 def main(args):
+    """Parse arguments, call main loop"""
 
     parser = OptionParser(description=__doc__)
-
     parser.add_option("-i", "--iterations", default='-1',
                       help="iterations to run")
     parser.add_option("-n", "--node", default='-1',
@@ -251,7 +249,7 @@ def main(args):
     parser.add_option("--totals", action="store_true",
                       help="include total rows")
 
-    (options, remaining) = parser.parse_args(args)
+    options = parser.parse_args(args)[0]
 
     if options.filter:
         options.filter = options.filter.split(',')
@@ -259,8 +257,8 @@ def main(args):
         options.filter = []
 
     # Set the terminal to unbuffered, to catch a single keypress
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
+    out = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(out)
     tty.setraw(sys.stdin.fileno())
 
     # input thread
@@ -271,9 +269,9 @@ def main(args):
                      int(options.iterations), options.sort, options.totals,
                      options.node, options.zero, options.filter)
     except (KeyboardInterrupt, SystemExit):
-        None
+        pass
     finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        termios.tcsetattr(out, termios.TCSADRAIN, old_settings)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
