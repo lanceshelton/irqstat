@@ -77,6 +77,9 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
     loops = 0
     cntsz = len('NODEXX')
 
+    print ("interactive commands -- "
+           "t: view totals, 0-9: view node, any other key: quit")
+
     while True:
         # Grab the new display type at a time when nothing is in flux
         if KEYEVENT.isSet():
