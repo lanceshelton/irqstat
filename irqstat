@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 # The MIT License (MIT)
-# 
+#
 # Copyright (c) 2015 Lance W. Shelton
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
@@ -27,6 +27,8 @@ A better way to watch /proc/interrupts, especially on large NUMA machines with
 so many CPUs that /proc/interrupts is wider than the screen.  Press '0'-'9'
 for node views, 't' for node totals
 """
+
+__version__ = '1.0.0'
 
 import sys
 import tty
@@ -274,6 +276,8 @@ def main(args):
                       help="update interval in seconds")
     parser.add_option("-z", "--zero", action="store_true",
                       help="exclude inactive IRQs")
+    parser.add_option("-v", "--version", action="store_true",
+                      help="get version")
     parser.add_option("--filter", default="",
                       help="filter IRQs based on name matching comma "
                       "separated filters")
@@ -281,6 +285,10 @@ def main(args):
                       help="include total rows")
 
     options = parser.parse_args(args)[0]
+
+    if options.version:
+        print __version__
+        return 0
 
     if options.filter:
         options.filter = options.filter.split(',')
