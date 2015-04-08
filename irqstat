@@ -28,7 +28,7 @@ so many CPUs that /proc/interrupts is wider than the screen.  Press '0'-'9'
 for node views, 't' for node totals
 """
 
-__version__ = '1.0.0'
+__version__ = '1.0.1-pre'
 
 import sys
 import tty
