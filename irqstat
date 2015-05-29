@@ -33,6 +33,7 @@ __version__ = '1.0.1-pre'
 import sys
 import tty
 import termios
+import time
 from time import sleep
 import subprocess
 from optparse import OptionParser
@@ -184,6 +185,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
             width = max(width, len(str(irq['sum'] - irq['oldsum'])))
 
         print "" + '\r'
+        print time.ctime() + '\r'
         print "IRQs / " + str(seconds) + " second(s)" + '\r'
         fmtstr = ('IRQ# %' + str(width) + 's') % 'TOTAL'
 
