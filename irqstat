@@ -104,7 +104,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
     width = len('NODEXX')
 
     if batch:
-        print ("Running at batch mode")
+        print "Running in batch mode"
     else:
         print ("interactive commands -- "
                "t: view totals, 0-9: view node, any other key: quit")
