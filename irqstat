@@ -30,9 +30,11 @@ for node views, 't' for node totals
 
 __version__ = '1.0.1-pre'
 
+import os
 import sys
 import tty
 import termios
+import time
 from time import sleep
 import subprocess
 from optparse import OptionParser
@@ -92,8 +94,8 @@ def filter_found(name, filter_list):
     return False
 
 
-def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
-                 filters):
+def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
+                 zero, filters):
     """Main I/O loop"""
     irqs = {}
     cpunodes = {}
@@ -101,8 +103,11 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
     loops = 0
     width = len('NODEXX')
 
-    print ("interactive commands -- "
-           "t: view totals, 0-9: view node, any other key: quit")
+    if batch:
+        print ("Running at batch mode")
+    else:
+        print ("interactive commands -- "
+               "t: view totals, 0-9: view node, any other key: quit")
 
     while True:
         # Grab the new display type at a time when nothing is in flux
@@ -184,6 +189,7 @@ def display_itop(seconds, rowcnt, iterations, sort, totals, dispnode, zero,
             width = max(width, len(str(irq['sum'] - irq['oldsum'])))
 
         print "" + '\r'
+        print time.ctime() + '\r'
         print "IRQs / " + str(seconds) + " second(s)" + '\r'
         fmtstr = ('IRQ# %' + str(width) + 's') % 'TOTAL'
 
@@ -263,6 +269,8 @@ def main(args):
     """Parse arguments, call main loop"""
 
     parser = OptionParser(description=__doc__)
+    parser.add_option("-b", "--batch", action="store_true",
+                      help="run under batch mode")
     parser.add_option("-i", "--iterations", default='-1',
                       help="iterations to run")
     parser.add_option("-n", "--node", default='-1',
@@ -296,21 +304,26 @@ def main(args):
         options.filter = []
 
     # Set the terminal to unbuffered, to catch a single keypress
-    out = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(out)
-    tty.setraw(sys.stdin.fileno())
+    if not options.batch:
+        out = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(out)
+        tty.setraw(sys.stdin.fileno())
 
-    # input thread
-    thread.start_new_thread(wait_for_input, tuple())
+        # input thread
+        thread.start_new_thread(wait_for_input, tuple())
+    else:
+        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
     try:
-        display_itop(int(options.time), int(options.rows),
+        display_itop(options.batch, int(options.time), int(options.rows),
                      int(options.iterations), options.sort, options.totals,
                      options.node, options.zero, options.filter)
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
-        termios.tcsetattr(out, termios.TCSADRAIN, old_settings)
+        if not options.batch:
+            termios.tcsetattr(out, termios.TCSADRAIN, old_settings)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
