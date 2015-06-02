@@ -48,6 +48,7 @@ def gen_numa():
     """Generate NUMA info"""
     cpunodes = {}
     numacores = {}
+    maxnode = 0
     out = subprocess.Popen('numactl --hardware | grep cpus', shell=True,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     errtxt = out.stderr.readline()
@@ -60,9 +61,10 @@ def gen_numa():
         if arr[0] == "node" and arr[2] == "cpus:" and len(arr) > 3:
             node = arr[1]
             numacores[node] = arr[3:]
+            maxnode += 1
             for core in arr[3:]:
                 cpunodes[core] = node
-    return numacores, cpunodes
+    return numacores, cpunodes, maxnode
 
 # input character, passed between threads
 INCHAR = ''
@@ -126,7 +128,11 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
             # This is effectively the first time and when any disabled CPUs
             # are enabled
             if not num in cpunodes.keys():
-                numacores, cpunodes = gen_numa()
+                numacores, cpunodes, maxnode = gen_numa()
+
+        # Set default rowcnt per numa node number
+        if rowcnt < 1:
+            rowcnt = maxnode * 5 + 10
 
         for line in out.readlines():
             vals = line.split()
@@ -190,7 +196,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
 
         print "" + '\r'
         print time.ctime() + '\r'
-        print "IRQs / " + str(seconds) + " second(s)" + '\r'
+        print "Top %d IRQs / %d second(s) \r" % (rowcnt, seconds)
         fmtstr = ('IRQ# %' + str(width) + 's') % 'TOTAL'
 
         # node view header
@@ -275,8 +281,8 @@ def main(args):
                       help="iterations to run")
     parser.add_option("-n", "--node", default='-1',
                       help="view a single node")
-    parser.add_option("-r", "--rows", default='10',
-                      help="rows to display (default 10)")
+    parser.add_option("-r", "--rows", default='-1',
+                      help="rows to display (default = 5 * NUMA node + 10)")
     parser.add_option("-s", "--sort", default='t',
                       help="column to sort on ('t':total, 'n': name, "
                       "'i':IRQ number, '1':node1, etc) (default: 't')")
