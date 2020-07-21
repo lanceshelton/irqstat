@@ -95,7 +95,7 @@ def filter_found(name, filter_list):
 
 
 def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
-                 zero, filters, file1):
+                 zero, filters, file1, file2):
     """Main I/O loop"""
     irqs = {}
     cpunodes = {}
@@ -266,6 +266,10 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
         if loops == iterations:
             break
 
+        if file2 and loops == 1:
+            intr_filename = file2
+            continue
+
         # thread.interrupt_main() does not seem to interrupt a sleep, so break
         # it into tenth-of-a-second sleeps to improve user response time on exit
         for _ in range(0, seconds * 10):
@@ -300,6 +304,9 @@ def main(args):
                       help="include total rows")
     parser.add_option("-f", "--file1", default="",
                       help="read a file instead of /proc/interrupts")
+    parser.add_option("-F", "--file2", default="",
+                      help="no monitoring. Compare the samples from two files "
+                      "instead")
 
     options = parser.parse_args(args)[0]
 
@@ -317,6 +324,12 @@ def main(args):
         options.iterations = 1
         options.batch = True
 
+    if options.file2:
+        if not options.file1:
+            print("ERROR: --file2 requires --file1")
+            return -1
+        options.iterations = 2
+
     # Set the terminal to unbuffered, to catch a single keypress
     if not options.batch:
         out = sys.stdin.fileno()
@@ -331,7 +344,8 @@ def main(args):
     try:
         display_itop(options.batch, int(options.time), int(options.rows),
                      int(options.iterations), options.sort, options.totals,
-                     options.node, options.zero, options.filter, options.file1)
+                     options.node, options.zero, options.filter, options.file1,
+                     options.file2)
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
