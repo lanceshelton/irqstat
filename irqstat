@@ -115,52 +115,52 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
             KEYEVENT.clear()
             dispnode = INCHAR if INCHAR in numacores.keys() else '-1'
 
-        out = open('/proc/interrupts', 'r')
-        header = out.readline()
-        cpus = []
-        for name in header.split():
-            num = name[3:]
-            cpus.append(num)
+        with open('/proc/interrupts', 'r') as intr_file:
+            header = intr_file.readline()
+            cpus = []
+            for name in header.split():
+                num = name[3:]
+                cpus.append(num)
 
-            # Only query the numa information when something is missing.
-            # This is effectively the first time and when any disabled CPUs
-            # are enabled
-            if not num in cpunodes.keys():
-                numacores, cpunodes = gen_numa()
+                # Only query the numa information when something is missing.
+                # This is effectively the first time and when any disabled CPUs
+                # are enabled
+                if not num in cpunodes.keys():
+                    numacores, cpunodes = gen_numa()
 
-        for line in out.readlines():
-            vals = line.split()
-            irqnum = vals[0].rstrip(':')
+            for line in intr_file.readlines():
+                vals = line.split()
+                irqnum = vals[0].rstrip(':')
 
-            # Optionally exclude rows that are not an IRQ number
-            if totals is None:
-                try:
-                    num = int(irqnum)
-                except ValueError:
-                    continue
+                # Optionally exclude rows that are not an IRQ number
+                if totals is None:
+                    try:
+                        num = int(irqnum)
+                    except ValueError:
+                        continue
 
-            irq = {}
-            irq['cpus'] = [int(x) for x in vals[1:len(cpus)+1]]
-            irq['oldcpus'] = (irqs[irqnum]['cpus'] if irqnum in irqs
-                              else [0] * len(cpus))
-            irq['name'] = ' '.join(vals[len(cpus)+1:])
-            irq['oldsum'] = irqs[irqnum]['sum'] if irqnum in irqs else 0
-            irq['sum'] = sum(irq['cpus'])
-            irq['num'] = irqnum
+                irq = {}
+                irq['cpus'] = [int(x) for x in vals[1:len(cpus)+1]]
+                irq['oldcpus'] = (irqs[irqnum]['cpus'] if irqnum in irqs
+                                  else [0] * len(cpus))
+                irq['name'] = ' '.join(vals[len(cpus)+1:])
+                irq['oldsum'] = irqs[irqnum]['sum'] if irqnum in irqs else 0
+                irq['sum'] = sum(irq['cpus'])
+                irq['num'] = irqnum
 
-            for node in numacores.keys():
-                oldkey = 'oldsum' + node
-                key = 'sum' + node
-                irq[oldkey] = (irqs[irqnum][key] if irqnum in irqs
-                               and key in irqs[irqnum] else 0)
-                irq[key] = 0
+                for node in numacores.keys():
+                    oldkey = 'oldsum' + node
+                    key = 'sum' + node
+                    irq[oldkey] = (irqs[irqnum][key] if irqnum in irqs
+                                   and key in irqs[irqnum] else 0)
+                    irq[key] = 0
 
-            for idx, val in enumerate(irq['cpus']):
-                key = 'sum' + cpunodes[cpus[idx]]
-                irq[key] = irq[key] + val if key in irq else val
+                for idx, val in enumerate(irq['cpus']):
+                    key = 'sum' + cpunodes[cpus[idx]]
+                    irq[key] = irq[key] + val if key in irq else val
 
-            # save old
-            irqs[irqnum] = irq
+                # save old
+                irqs[irqnum] = irq
 
         def sort_func(val):
             """Sort output"""
