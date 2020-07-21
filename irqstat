@@ -95,7 +95,7 @@ def filter_found(name, filter_list):
 
 
 def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
-                 zero, filters):
+                 zero, filters, file1):
     """Main I/O loop"""
     irqs = {}
     cpunodes = {}
@@ -109,13 +109,18 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
         print ("interactive commands -- "
                "t: view totals, 0-9: view node, any other key: quit")
 
+    if file1:
+        intr_filename = file1
+    else:
+        intr_filename = '/proc/interrupts'
+
     while True:
         # Grab the new display type at a time when nothing is in flux
         if KEYEVENT.isSet():
             KEYEVENT.clear()
             dispnode = INCHAR if INCHAR in numacores.keys() else '-1'
 
-        with open('/proc/interrupts', 'r') as intr_file:
+        with open(intr_filename, 'r') as intr_file:
             header = intr_file.readline()
             cpus = []
             for name in header.split():
@@ -291,6 +296,8 @@ def main(args):
                       "separated filters")
     parser.add_option("--totals", action="store_true",
                       help="include total rows")
+    parser.add_option("-f", "--file1", default="",
+                      help="read a file instead of /proc/interrupts")
 
     options = parser.parse_args(args)[0]
 
@@ -302,6 +309,11 @@ def main(args):
         options.filter = options.filter.split(',')
     else:
         options.filter = []
+
+    # If file is specified, no iterations
+    if options.file1:
+        options.iterations = 1
+        options.batch = True
 
     # Set the terminal to unbuffered, to catch a single keypress
     if not options.batch:
@@ -317,7 +329,7 @@ def main(args):
     try:
         display_itop(options.batch, int(options.time), int(options.rows),
                      int(options.iterations), options.sort, options.totals,
-                     options.node, options.zero, options.filter)
+                     options.node, options.zero, options.filter, options.file1)
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
