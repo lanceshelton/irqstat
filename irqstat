@@ -182,7 +182,9 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
             if sort == 't':
                 return val['sum'] - val['oldsum']
             if sort == 'i':
-                return int(val['num'])
+                if val['num'].isdigit():
+                    return int(val['num'])
+                return sys.maxsize
             if sort == 'n':
                 return val['name']
         # reverse sort all IRQ count sorts
