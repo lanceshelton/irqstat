@@ -95,7 +95,7 @@ def filter_found(name, filter_list):
 
 
 def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
-                 zero, filters, file1, file2):
+                 zero, filters, file1, file2, overall):
     """Main I/O loop"""
     irqs = {}
     cpunodes = {}
@@ -103,11 +103,11 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
     loops = 0
     width = len('NODEXX')
 
-    if batch:
-        print "Running in batch mode"
-    else:
-        print ("interactive commands -- "
-               "t: view totals, 0-9: view node, any other key: quit")
+    if not file1 and batch:
+        print("Running in batch mode")
+    elif not file1:
+        print("interactive commands -- "
+              "t: view totals, 0-9: view node, any other key: quit\r")
 
     if file1:
         intr_filename = file1
@@ -195,9 +195,11 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
         for idx, irq in enumerate(rows):
             width = max(width, len(str(irq['sum'] - irq['oldsum'])))
 
-        print "" + '\r'
-        print time.ctime() + '\r'
-        print "IRQs / " + str(seconds) + " second(s)" + '\r'
+        if overall and loops > 0:
+            print("" + '\r')
+        if not file1 and (overall or loops > 0):
+            print(time.ctime() + '\r')
+            print("IRQs / " + str(seconds) + " second(s)" + '\r')
         fmtstr = ('IRQ# %' + str(width) + 's') % 'TOTAL'
 
         # node view header
@@ -215,7 +217,8 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                 fmtstr += (' %' + str(width) + 's ') % node
 
         fmtstr += ' NAME'
-        print fmtstr + '\r'
+        if overall or loops > 0:
+            print(fmtstr + '\r')
 
         displayed_rows = 0
         for idx, irq in enumerate(rows):
@@ -250,7 +253,8 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                     nodecnt = irq[nodesum] - irq[oldnodesum]
                     fmtstr += ((' %' + str(width) + 's ') % str(nodecnt))
             fmtstr += ' ' + irq['name']
-            print fmtstr + '\r'
+            if overall or loops > 0:
+                print(fmtstr + '\r')
             displayed_rows += 1
             if displayed_rows == rowcnt:
                 break
@@ -307,6 +311,8 @@ def main(args):
     parser.add_option("-F", "--file2", default="",
                       help="no monitoring. Compare the samples from two files "
                       "instead")
+    parser.add_option("-O", "--overall", action="store_true",
+                      help="print all-time stats at the beginning")
 
     options = parser.parse_args(args)[0]
 
@@ -330,6 +336,9 @@ def main(args):
             return -1
         options.iterations = 2
 
+    if options.file1 and not options.file2:
+        options.overall = True
+
     # Set the terminal to unbuffered, to catch a single keypress
     if not options.batch:
         out = sys.stdin.fileno()
@@ -345,7 +354,7 @@ def main(args):
         display_itop(options.batch, int(options.time), int(options.rows),
                      int(options.iterations), options.sort, options.totals,
                      options.node, options.zero, options.filter, options.file1,
-                     options.file2)
+                     options.file2, options.overall)
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
