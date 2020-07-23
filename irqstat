@@ -48,21 +48,37 @@ def gen_numa():
     """Generate NUMA info"""
     cpunodes = {}
     numacores = {}
-    out = subprocess.Popen('numactl --hardware | grep cpus', shell=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    errtxt = out.stderr.readline()
-    if errtxt:
-        print errtxt + '\r\n'
-        print "Is numactl installed?\r"
+    err_str = ""
+
+    try:
+        temp = subprocess.Popen(['numactl', '--hardware'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        (output, error) = temp.communicate()
+        temp.wait()
+
+        if error:
+            print("NUMACTL ERROR:")
+            print(error)
+            exit(1)
+
+        output = output.split("\n")
+        for line in output:
+            arr = line.split()
+            if len(arr) < 3:
+                continue
+            if arr[0] == "node" and arr[2] == "cpus:":
+                node = arr[1]
+                numacores[node] = arr[3:]
+                for core in arr[3:]:
+                    cpunodes[core] = node
+                continue
+        return numacores, cpunodes
+    except OSError as err:
+        if err.errno == 2: # No such file or directory
+            err_str = " (is numactl installed?)"
+        print("OS ERROR: " + err.strerror + err_str)
         exit(1)
-    for line in out.stdout.readlines():
-        arr = line.split()
-        if arr[0] == "node" and arr[2] == "cpus:" and len(arr) > 3:
-            node = arr[1]
-            numacores[node] = arr[3:]
-            for core in arr[3:]:
-                cpunodes[core] = node
-    return numacores, cpunodes
 
 # input character, passed between threads
 INCHAR = ''
