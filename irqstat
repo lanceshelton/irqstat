@@ -44,23 +44,28 @@ import threading
 KEYEVENT = threading.Event()
 
 
-def gen_numa():
+def gen_numa(numafile):
     """Generate NUMA info"""
     cpunodes = {}
     numacores = {}
     err_str = ""
 
     try:
-        temp = subprocess.Popen(['numactl', '--hardware'],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-        (output, error) = temp.communicate()
-        temp.wait()
+        if not numafile:
+            temp = subprocess.Popen(['numactl', '--hardware'],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+            (output, error) = temp.communicate()
+            temp.wait()
 
-        if error:
-            print("NUMACTL ERROR:")
-            print(error)
-            exit(1)
+            if error:
+                print("NUMACTL ERROR:")
+                print(error)
+                exit(1)
+        else:
+            numa_file = open(numafile, 'r')
+            output = numa_file.read()
+            numa_file.close()
 
         output = output.split("\n")
         for line in output:
@@ -74,10 +79,13 @@ def gen_numa():
                     cpunodes[core] = node
                 continue
         return numacores, cpunodes
-    except OSError as err:
+    except (OSError, IOError) as err:
         if err.errno == 2: # No such file or directory
-            err_str = " (is numactl installed?)"
-        print("OS ERROR: " + err.strerror + err_str)
+            if numafile:
+                err_str = " (does '" + numafile + "' exist?)"
+            else:
+                err_str = err.strerror + " (is numactl installed?)"
+        print("ERROR: " + err.strerror + err_str)
         exit(1)
 
 # input character, passed between threads
@@ -111,7 +119,7 @@ def filter_found(name, filter_list):
 
 
 def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
-                 zero, filters, file1, file2, overall):
+                 zero, filters, file1, file2, overall, numafile):
     """Main I/O loop"""
     irqs = {}
     cpunodes = {}
@@ -147,7 +155,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                 # This is effectively the first time and when any disabled CPUs
                 # are enabled
                 if not num in cpunodes.keys():
-                    numacores, cpunodes = gen_numa()
+                    numacores, cpunodes = gen_numa(numafile)
 
             for line in intr_file.readlines():
                 vals = line.split()
@@ -329,6 +337,9 @@ def main(args):
                       "instead")
     parser.add_option("-O", "--overall", action="store_true",
                       help="print all-time stats at the beginning")
+    parser.add_option("-N", "--numafile", default="",
+                      help="read the NUMA info from a file, instead of "
+                      "calling numactl")
 
     options = parser.parse_args(args)[0]
 
@@ -370,7 +381,7 @@ def main(args):
         display_itop(options.batch, int(options.time), int(options.rows),
                      int(options.iterations), options.sort, options.totals,
                      options.node, options.zero, options.filter, options.file1,
-                     options.file2, options.overall)
+                     options.file2, options.overall, options.numafile)
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
