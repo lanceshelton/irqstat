@@ -142,7 +142,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
         # Grab the new display type at a time when nothing is in flux
         if KEYEVENT.isSet():
             KEYEVENT.clear()
-            dispnode = INCHAR if INCHAR in numacores.keys() else '-1'
+            dispnode = INCHAR if INCHAR in numacores else '-1'
 
         with open(intr_filename, 'r') as intr_file:
             header = intr_file.readline()
@@ -154,7 +154,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                 # Only query the numa information when something is missing.
                 # This is effectively the first time and when any disabled CPUs
                 # are enabled
-                if not num in cpunodes.keys():
+                if not num in cpunodes:
                     numacores, cpunodes = gen_numa(numafile)
 
             for line in intr_file.readlines():
@@ -177,7 +177,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                 irq['sum'] = sum(irq['cpus'])
                 irq['num'] = irqnum
 
-                for node in numacores.keys():
+                for node in numacores:
                     oldkey = 'oldsum' + node
                     key = 'sum' + node
                     irq[oldkey] = (irqs[irqnum][key] if irqnum in irqs
@@ -200,7 +200,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                 pass
 
             if sortnum >= 0:
-                for node in numacores.keys():
+                for node in numacores:
                     if sortnum == int(node):
                         return val['sum' + node] - val['oldsum' + node]
             if sort == 't':
@@ -211,6 +211,8 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                 return sys.maxsize
             if sort == 'n':
                 return val['name']
+            raise Exception('Invalid sort type {}'.format(sort))
+
         # reverse sort all IRQ count sorts
         rev = sort not in ['i', 'n']
         rows = sorted(irqs.values(), key=sort_func, reverse=rev)
@@ -236,7 +238,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
                     fmtstr += (' %' + str(width) + 's ') % cpu
         # top view header
         else:
-            for node in sorted(numacores.keys()):
+            for node in sorted(numacores):
                 node = 'NODE%s' % node
                 fmtstr += (' %' + str(width) + 's ') % node
 
@@ -246,7 +248,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
 
         displayed_rows = 0
         for idx, irq in enumerate(rows):
-            if len(filters) and not filter_found(irq['name'], filters):
+            if filters and not filter_found(irq['name'], filters):
                 continue
 
             total = irq['sum'] - irq['oldsum']
@@ -271,7 +273,7 @@ def display_itop(batch, seconds, rowcnt, iterations, sort, totals, dispnode,
 
             # top view
             else:
-                for node in sorted(numacores.keys()):
+                for node in sorted(numacores):
                     oldnodesum = 'oldsum' + node
                     nodesum = 'sum' + node
                     nodecnt = irq[nodesum] - irq[oldnodesum]
@@ -387,6 +389,7 @@ def main(args):
     finally:
         if not options.batch:
             termios.tcsetattr(out, termios.TCSADRAIN, old_settings)
+    return 0
 
 
 if __name__ == "__main__":
