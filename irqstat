@@ -38,8 +38,13 @@ import time
 from time import sleep
 import subprocess
 from optparse import OptionParser
-import thread
 import threading
+
+try:
+    import thread
+except ImportError:
+    import _thread as thread
+
 
 KEYEVENT = threading.Event()
 
@@ -67,7 +72,7 @@ def gen_numa(numafile):
             output = numa_file.read()
             numa_file.close()
 
-        output = output.split("\n")
+        output = output.decode("utf-8").split("\n")
         for line in output:
             arr = line.split()
             if len(arr) < 3:
@@ -346,7 +351,7 @@ def main(args):
     options = parser.parse_args(args)[0]
 
     if options.version:
-        print __version__
+        print(__version__)
         return 0
 
     if options.filter:
