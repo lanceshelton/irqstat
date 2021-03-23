@@ -30,7 +30,6 @@ for node views, 't' for node totals
 
 __version__ = '1.0.1-pre'
 
-import os
 import sys
 import tty
 import termios
@@ -77,7 +76,7 @@ def gen_numa(numafile):
             if error:
                 print("NUMACTL ERROR:")
                 print(error)
-                exit(1)
+                sys.exit(1)
         else:
             numa_file = open(numafile, 'r')
             output = numa_file.read()
@@ -98,11 +97,11 @@ def gen_numa(numafile):
     except (OSError, IOError) as err:
         if err.errno == 2: # No such file or directory
             if numafile:
-                err_str = " (does '" + numafile + "' exist?)"
+                err_str = " (does '" + numafile + "' exist?)\r"
             else:
-                err_str = err.strerror + " (is numactl installed?)"
+                err_str = err.strerror + " (is numactl installed?)\r"
         print("ERROR: " + err.strerror + err_str)
-        exit(1)
+        sys.exit(1)
 
 # input character, passed between threads
 INCHAR = ''
