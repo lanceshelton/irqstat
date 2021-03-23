@@ -45,6 +45,17 @@ try:
 except ImportError:
     import _thread as thread
 
+class Unbuffered:
+    def __init__(self, stream):
+        self.stream = stream
+    def write(self, data):
+        self.stream.write(data)
+        self.stream.flush()
+    def writelines(self, datas):
+        self.stream.writelines(datas)
+        self.stream.flush()
+    def __getattr__(self, attr):
+        return getattr(self.stream, attr)
 
 KEYEVENT = threading.Event()
 
@@ -382,7 +393,7 @@ def main(args):
         # input thread
         thread.start_new_thread(wait_for_input, tuple())
     else:
-        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+        sys.stdout = Unbuffered(sys.stdout)
 
     try:
         display_itop(options.batch, int(options.time), int(options.rows),
