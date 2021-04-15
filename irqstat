@@ -67,12 +67,14 @@ def gen_numa(numafile):
                 print("NUMACTL ERROR:")
                 print(error)
                 exit(1)
+
+            output = output.decode("utf8").split("\n")
         else:
             numa_file = open(numafile, 'r')
             output = numa_file.read()
             numa_file.close()
+            output = output.split("\n")
 
-        output = output.decode("utf-8").split("\n")
         for line in output:
             arr = line.split()
             if len(arr) < 3:
@@ -382,7 +384,7 @@ def main(args):
         # input thread
         thread.start_new_thread(wait_for_input, tuple())
     else:
-        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w')
 
     try:
         display_itop(options.batch, int(options.time), int(options.rows),
